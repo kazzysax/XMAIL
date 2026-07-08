@@ -2,14 +2,10 @@ services:
   - type: web
     name: xmail-platform
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     buildCommand: npm install
     startCommand: npm start
-    disk:
-      name: xmail-data
-      mountPath: /opt/render/project/src
-      sizeGB: 1
     envVars:
       - key: PORT
         value: 8080
