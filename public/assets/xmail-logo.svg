@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" role="img" aria-label="XMAIL">
+  <defs>
+    <linearGradient id="xBarA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC46A"/>
+      <stop offset="45%" stop-color="#FF8A2E"/>
+      <stop offset="100%" stop-color="#E85A1B"/>
+    </linearGradient>
+    <linearGradient id="xBarB" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFB14A"/>
+      <stop offset="50%" stop-color="#F07A22"/>
+      <stop offset="100%" stop-color="#C94A12"/>
+    </linearGradient>
+    <linearGradient id="envGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D96A2A"/>
+      <stop offset="100%" stop-color="#A63D10"/>
+    </linearGradient>
+    <linearGradient id="envFlap" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F08A3A"/>
+      <stop offset="100%" stop-color="#C45418"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF8EE"/>
+      <stop offset="100%" stop-color="#F0E2CE"/>
+    </linearGradient>
+    <filter id="soft" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3.2" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Envelope -->
+  <g filter="url(#soft)">
+    <rect x="98" y="42" width="88" height="68" rx="8" fill="url(#envGrad)"/>
+    <path d="M98 50 L142 78 L186 50 L186 42 Q186 36 180 36 L104 36 Q98 36 98 42 Z" fill="url(#envFlap)"/>
+    <path d="M106 44 L142 70 L178 44" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M106 102 L142 78 L178 102" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+  </g>
+
+  <!-- X mark -->
+  <g filter="url(#soft)">
+    <path d="M18 18 L48 18 L122 118 L92 118 Z" fill="url(#xBarA)"/>
+    <path d="M28 18 L48 18 L122 118 L102 118 Z" fill="rgba(255,255,255,0.14)"/>
+    <path d="M152 18 L182 18 L108 118 L78 118 Z" fill="url(#xBarB)"/>
+    <path d="M152 18 L172 18 L98 118 L78 118 Z" fill="rgba(0,0,0,0.12)"/>
+  </g>
+
+  <!-- Document sheet -->
+  <g filter="url(#soft)">
+    <path d="M118 52 H158 Q166 52 166 60 V96 L142 112 L118 96 V60 Q118 52 126 52 Z" fill="url(#paper)"/>
+    <path d="M118 96 L142 112 L166 96" fill="#E8D8C4"/>
+    <rect x="130" y="64" width="4.5" height="28" rx="2" fill="#6B3A1E"/>
+    <rect x="140" y="64" width="4.5" height="28" rx="2" fill="#6B3A1E"/>
+    <rect x="150" y="64" width="4.5" height="28" rx="2" fill="#6B3A1E"/>
+  </g>
+</svg>
