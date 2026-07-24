@@ -120,6 +120,19 @@ export async function dailyRoundup(openEmails) {
   return callClaude(sys, `Open emails:\n${listing}`, 600);
 }
 
+export async function rangeReport(emails, days) {
+  if (!emails.length) return `No emails in the last ${days} days.`;
+  const listing = emails
+    .map(
+      (e, i) =>
+        `${i + 1}. [${(e.priority || "normal").toUpperCase()}]${e.category ? ` (${e.category})` : ""} From: ${e.from || e.fromAddr} | Subject: ${e.subject} | Summary: ${e.summary || (e.body || "").slice(0, 160)} | Action: ${e.action || "—"}${e.scamRisk >= 0.5 ? " | possible scam" : ""}`
+    )
+    .join("\n");
+  const sys =
+    "You are XMAIL. Write a concise inbox report covering the given period for a business owner. Plain text, no markdown. Open with the overall shape of the inbox (volume, what dominated), call out anything high-priority or still needing action, flag anything risky, then close with a short overall takeaway. Under 220 words.";
+  return callClaude(sys, `Period: last ${days} days, ${emails.length} email(s). Emails:\n${listing}`, 700);
+}
+
 const ASSISTANT_ACTIONS = [
   "view_emails", "view_category", "view_tier", "search", "refresh_inbox",
   "add_rule", "add_category", "create_folder", "add_template", "add_business", "unknown",

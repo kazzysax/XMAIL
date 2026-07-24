@@ -15,23 +15,29 @@ export const okx = {
   walletAddress: process.env.OKX_WALLET_ADDRESS || "",
   walletKey: process.env.OKX_WALLET_KEY || "", // keep secret; never commit
 
-  // network: "mock" (local, no chain), "testnet", or "mainnet"
+  // network: "mock" (local, no chain), "testnet", or "mainnet" — Tier 2 (buyer) only
   network: process.env.OKX_NETWORK || "mock",
+
+  // Official OKX x402 Facilitator credentials (Tier 1 seller) — from the
+  // OKX Developer Portal. Required for real ASP registration on OKX.AI.
+  apiKey: process.env.OKX_API_KEY || "",
+  secretKey: process.env.OKX_SECRET_KEY || "",
+  passphrase: process.env.OKX_PASSPHRASE || "",
+  // CAIP-2 network id for Tier 1 payments (verified via OKX's official
+  // Facilitator, not a custom verifier): eip155:1952 = X Layer testnet,
+  // eip155:196 = X Layer mainnet.
+  networkId: process.env.OKX_NETWORK_ID || "eip155:1952",
 
   // x402 settlement token + chain info
   token: process.env.OKX_TOKEN || "USDT",
   chainId: Number(process.env.OKX_CHAIN_ID || 196), // X Layer mainnet = 196
-
-  // real onchain verification (used when network = testnet|mainnet)
-  rpcUrl: process.env.XLAYER_RPC_URL || "https://rpc.xlayer.tech",
-  usdtContract: process.env.USDT_CONTRACT_ADDRESS || "0x1E4a5963aBFD975d8c9021ce480b42188849D41d",
-  minConfirmations: Number(process.env.MIN_CONFIRMATIONS || 1),
 
   // ---- Tier 1: prices XMAIL charges (in smallest USDT units is overkill for demo; use decimal) ----
   sell: {
     triage: Number(process.env.PRICE_TRIAGE || 0.005),
     draftReply: Number(process.env.PRICE_DRAFT || 0.02),
     fillTemplate: Number(process.env.PRICE_FILL || 0.02),
+    report: Number(process.env.PRICE_REPORT || 0.05),
   },
 
   // ---- Tier 2: what XMAIL will pay to hire a scam-check agent ----

@@ -130,8 +130,19 @@ CREATE TABLE IF NOT EXISTS blacklist (
   created_at BIGINT NOT NULL,
   UNIQUE(user_id, address)
 );
+CREATE TABLE IF NOT EXISTS asp_access_grants (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  label TEXT,
+  created_at BIGINT NOT NULL,
+  expires_at BIGINT,
+  revoked_at BIGINT,
+  last_used_at BIGINT
+);
 CREATE INDEX IF NOT EXISTS idx_emails_user ON emails(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_data_rows_table ON data_rows(table_id);
+CREATE INDEX IF NOT EXISTS idx_asp_grants_hash ON asp_access_grants(token_hash);
 `);
 
 /* schema upgrades for existing databases (no-ops on fresh ones) */
@@ -341,6 +352,21 @@ export const updateEmail = (id, fields) => {
 };
 export const recentEmailsFor = async (userId, limit = 50) =>
   (await all("SELECT * FROM emails WHERE user_id = ? ORDER BY received_at DESC LIMIT ?", [userId, limit])).map(hydrate);
+export const emailsInRange = async (userId, sinceMs) =>
+  (await all("SELECT * FROM emails WHERE user_id = ? AND received_at >= ? ORDER BY received_at DESC", [userId, sinceMs])).map(hydrate);
+
+/* ---------- ASP access grants (a user lets a specific third-party agent pull their report) ---------- */
+export const aspGrantsFor = (userId) =>
+  all("SELECT id, label, created_at, expires_at, revoked_at, last_used_at FROM asp_access_grants WHERE user_id = ? ORDER BY id DESC", [userId]);
+export const createAspGrant = (userId, tokenHash, label, expiresAt) =>
+  run("INSERT INTO asp_access_grants (user_id, token_hash, label, created_at, expires_at) VALUES (?,?,?,?,?)",
+    [userId, tokenHash, label || null, Date.now(), expiresAt ?? null]);
+export const aspGrantByHash = (tokenHash) =>
+  get("SELECT * FROM asp_access_grants WHERE token_hash = ?", [tokenHash]);
+export const revokeAspGrant = (userId, id) =>
+  run("UPDATE asp_access_grants SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL", [Date.now(), id, userId]);
+export const touchAspGrant = (id) =>
+  run("UPDATE asp_access_grants SET last_used_at = ? WHERE id = ?", [Date.now(), id]);
 
 export const knownSendersFor = async (userId) => {
   const rows = await all("SELECT DISTINCT from_addr FROM emails WHERE user_id=? AND sent_reply IS NOT NULL", [userId]);
@@ -389,11 +415,10 @@ export const userByAnyEmail = (addr) => {
   return get("SELECT * FROM users WHERE email = ? OR mail_user = ?", [a, a]);
 };
 
-/* ---------- mainnet payment replay guard ---------- */
-export const isTxUsed = async (txHash) => !!(await get("SELECT 1 FROM used_payments WHERE tx_hash = ?", [txHash]));
-export const markTxUsed = (txHash, service, amount, payer) =>
-  run("INSERT INTO used_payments (tx_hash, service, amount, payer, used_at) VALUES (?,?,?,?,?)",
-    [txHash, service, amount, payer, Date.now()]);
+// Replay-guard helpers for the old homemade chain verifier were removed —
+// OKX's official Facilitator (src/okx/services.js) now handles replay
+// protection itself. The used_payments table is left in place (harmless,
+// unused) rather than touched as part of this payment-layer change.
 
 /* ---------- seen uids ---------- */
 export const isSeen = async (userId, uid) => !!(await get("SELECT 1 FROM seen_uids WHERE user_id = ? AND uid = ?", [userId, uid]));

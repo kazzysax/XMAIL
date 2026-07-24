@@ -21,6 +21,12 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: RESEND_FROM_NAME
+        value: XMAIL
       - key: DATABASE_URL
         sync: false
       - key: TWILIO_ACCOUNT_SID
@@ -43,3 +49,9 @@ services:
         sync: false
       - key: FORWARD_MAIL_PASSWORD
         sync: false
+      - key: OKX_WALLET_ADDRESS
+        value: "0x297939fec3abc93a0eaeeada3963f3ac8b9fe97a"
+      - key: OKX_NETWORK
+        value: "mock"
+      - key: OKX_NETWORK_ID
+        value: "eip155:1952"

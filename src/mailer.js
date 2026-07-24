@@ -136,14 +136,21 @@ export async function fetchForwardInbox() {
 /* ---------- send an approved reply from this user's address ---------- */
 export async function sendReplyFor(user, email, bodyText) {
   const c = creds(user);
+  const subject = /^re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`;
+  const to = email.fromAddr || email.from;
+
+  if (config.resend.enabled) {
+    await sendViaResend(c, { to, subject, text: bodyText, messageId: email.messageId });
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     host: c.smtpHost, port: c.smtpPort, secure: c.smtpPort === 465,
     auth: { user: c.mailUser, pass: c.mailPass },
     connectionTimeout: 15000, // fail fast instead of hanging ~2min on a blocked port
     greetingTimeout: 15000,
   });
-  const subject = /^re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`;
-  const mail = { from: c.mailUser, to: email.fromAddr || email.from, subject, text: bodyText };
+  const mail = { from: c.mailUser, to, subject, text: bodyText };
   if (email.messageId) {
     mail.inReplyTo = email.messageId;
     mail.references = email.messageId;
@@ -158,5 +165,31 @@ export async function sendReplyFor(user, email, bodyText) {
       );
     }
     throw e;
+  }
+}
+
+/* ---------- send via Resend's HTTPS API (bypasses SMTP-port blocks) ---------- */
+async function sendViaResend(c, { to, subject, text, messageId }) {
+  const body = {
+    from: `${config.resend.fromName} <${config.resend.fromEmail}>`,
+    to: [to],
+    subject,
+    text,
+    reply_to: c.mailUser,
+  };
+  if (messageId) {
+    body.headers = { "In-Reply-To": messageId, References: messageId };
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.resend.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    throw new Error(`Resend send failed (${res.status}): ${errBody || res.statusText}`);
   }
 }

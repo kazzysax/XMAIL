@@ -2,7 +2,7 @@ import express from "express";
 import { OAuth2Client } from "google-auth-library";
 import { config } from "./config.js";
 import * as db from "./db.js";
-import { hashPassword, verifyPassword, signSession, verifySession, encrypt, randomCode } from "./crypto.js";
+import { hashPassword, verifyPassword, signSession, verifySession, encrypt, randomCode, hashToken } from "./crypto.js";
 import { testImap, fetchNewEmailsFor, sendReplyFor } from "./mailer.js";
 import { processIncoming } from "./engine.js";
 import { extractFields, draftReply, fillTemplate, interpretCommand } from "./ai.js";
@@ -216,6 +216,26 @@ export function apiRouter() {
   });
   r.delete("/blacklist/:id", auth, async (req, res) => {
     await db.delBlacklist(req.user.id, Number(req.params.id));
+    res.json({ ok: true });
+  });
+
+  /* ---------- ASP access tokens (let a specific third-party agent pull your xmail.report) ---------- */
+  r.get("/asp-tokens", auth, async (req, res) => res.json(await db.aspGrantsFor(req.user.id)));
+  r.post("/asp-tokens", auth, async (req, res) => {
+    const label = (req.body?.label || "").trim().slice(0, 60) || null;
+    const requestedDays = Number(req.body?.expiresInDays);
+    const days = Number.isFinite(requestedDays) && requestedDays > 0 ? requestedDays : 90;
+    const expiresAt = Date.now() + days * 24 * 3600 * 1000;
+    const token = `xmail_asp_${randomCode(32)}`;
+    await db.createAspGrant(req.user.id, hashToken(token), label, expiresAt);
+    res.json({
+      token,
+      expiresAt,
+      note: "Save this now — it will not be shown again. Only give it to an agent you trust to read your mail history.",
+    });
+  });
+  r.delete("/asp-tokens/:id", auth, async (req, res) => {
+    await db.revokeAspGrant(req.user.id, Number(req.params.id));
     res.json({ ok: true });
   });
   r.post("/emails/:id/blacklist", auth, async (req, res) => {

@@ -1,25 +1,21 @@
 import crypto from "crypto";
 import { okx } from "./config.js";
-import { verifyUsdtPayment } from "./chain.js";
-import * as db from "../db.js";
 
 /*
 x402 — HTTP-native payments (the OKX AI / Coinbase standard).
 
-SELLER SIDE (Tier 1, requirePayment below) has two verification modes:
+SELLER SIDE (Tier 1, XMAIL's three paid services) now runs on OKX's
+official x402 SDK (@okxweb3/x402-express + x402-core + x402-evm) — see
+src/okx/services.js. Payments are verified and settled through OKX's
+Broker/Facilitator infrastructure, not a custom verifier, so real buyers
+on OKX.AI's A2MCP marketplace can actually pay XMAIL. The homemade
+voucher signer + raw-RPC chain verifier that used to live here (and in
+the now-removed src/okx/chain.js) have been replaced.
 
-  - okx.network === "mock"    : local HMAC-signed voucher (protocol-shape
-                                 only, no chain — dev/demo use)
-  - okx.network === "testnet"
-    or "mainnet"              : MAINNET-GRADE. Proof is a real transaction
-                                 hash. We read X Layer via RPC, decode the
-                                 ERC-20 Transfer event, and confirm a genuine
-                                 USDT payment of at least the quoted amount
-                                 landed in XMAIL's wallet. Each tx hash can
-                                 be spent exactly once (DB-enforced, atomic).
-
-BUYER SIDE (Tier 2, XMAIL hiring another agent) is intentionally left on
-the mock/testnet demo path below and is not covered by this mainnet upgrade.
+BUYER SIDE (Tier 2, XMAIL hiring another agent, e.g. the scam-check) is
+intentionally left on the mock/testnet demo path below — signVoucher,
+payAndCall, and settleOnchain are unrelated to the Tier 1 upgrade and are
+still used by scamcheck.js.
 */
 
 /* ---------------- mock-mode voucher helpers (dev/demo only) ---------------- */
@@ -46,7 +42,10 @@ function verifyVoucher(proofB64, expect) {
 }
 
 /* =====================================================================
-   SERVER SIDE (Tier 1) — charge other agents for XMAIL services
+   SERVER SIDE (bundled mock ASP only — src/okx/mockAsp.js) — this is NOT
+   what XMAIL's own Tier 1 services use anymore (those run on the official
+   SDK in services.js). This stays so the bundled scam-check counterparty
+   can keep speaking the simple mock voucher protocol to payAndCall below.
    ===================================================================== */
 
 // pending challenges: nonce -> {amount, token, service, createdAt}  (mock mode only)
@@ -57,13 +56,13 @@ setInterval(() => {
 }, 60 * 1000);
 
 /**
- * Express middleware factory: require payment of `amount` USDT before the
- * handler runs. Attaches req.payment = { payer, txRef, amount } on success.
+ * Express middleware factory (mock-mode only): require payment of `amount`
+ * USDT before the handler runs. Attaches req.payment = { payer, txRef, amount }
+ * on success. Used only by the bundled mock ASP, not XMAIL's real services.
  */
 export function requirePayment(amount, serviceName = "xmail-service") {
   return async (req, res, next) => {
     const proof = req.headers["x-payment"];
-    const mainnetGrade = okx.network === "testnet" || okx.network === "mainnet";
 
     if (!proof) {
       const nonce = crypto.randomBytes(12).toString("hex");
@@ -75,48 +74,14 @@ export function requirePayment(amount, serviceName = "xmail-service") {
           token: okx.token,
           chainId: okx.chainId,
           payTo: okx.walletAddress || "0xXMAIL_WALLET_NOT_SET",
-          contract: mainnetGrade ? okx.usdtContract : undefined,
           nonce,
-          proofFormat: mainnetGrade
-            ? "base64 JSON { txHash } \u2014 a real USDT transfer to payTo on X Layer for at least `amount`"
-            : "base64 JSON { amount, token, nonce, payer, sig } (mock voucher \u2014 dev only)",
+          proofFormat: "base64 JSON { amount, token, nonce, payer, sig } (mock voucher — dev only)",
           note: "Pay then retry with header X-Payment: <proof>",
         },
       });
       return;
     }
 
-    /* ---------------- MAINNET-GRADE PATH ---------------- */
-    if (mainnetGrade) {
-      let payload;
-      try {
-        payload = JSON.parse(Buffer.from(proof, "base64").toString());
-      } catch {
-        return res.status(400).json({ error: "Malformed X-Payment proof" });
-      }
-      const txHash = payload.txHash;
-      if (!txHash) return res.status(400).json({ error: "X-Payment proof must include a txHash" });
-
-      if (await db.isTxUsed(txHash)) {
-        return res.status(402).json({ error: "This payment has already been used for a previous call." });
-      }
-
-      try {
-        const verified = await verifyUsdtPayment(txHash, okx.walletAddress, amount);
-        // atomic claim: DB primary key prevents a concurrent second request
-        // from double-spending the same tx between verify and here
-        await db.markTxUsed(txHash, serviceName, amount, verified.from);
-        req.payment = { payer: verified.from, txRef: txHash, amount };
-        return next();
-      } catch (e) {
-        if (/UNIQUE constraint|duplicate key value/i.test(e.message)) {
-          return res.status(402).json({ error: "This payment has already been used for a previous call." });
-        }
-        return res.status(402).json({ error: "Payment invalid: " + e.message });
-      }
-    }
-
-    /* ---------------- MOCK PATH (dev/demo only) ---------------- */
     let payload;
     try {
       payload = JSON.parse(Buffer.from(proof, "base64").toString());
@@ -124,7 +89,7 @@ export function requirePayment(amount, serviceName = "xmail-service") {
       return res.status(400).json({ error: "Malformed X-Payment proof" });
     }
     const challenge = challenges.get(payload.nonce);
-    if (!challenge) return res.status(402).json({ error: "Unknown or expired payment nonce \u2014 request a fresh 402." });
+    if (!challenge) return res.status(402).json({ error: "Unknown or expired payment nonce — request a fresh 402." });
     const v = verifyVoucher(proof, { amount: challenge.amount, token: challenge.token, nonce: payload.nonce });
     if (!v.ok) return res.status(402).json({ error: "Payment invalid: " + v.reason });
     challenges.delete(payload.nonce); // one-time use

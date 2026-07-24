@@ -58,3 +58,6 @@ export function verifySession(token) {
 }
 
 export const randomCode = (len = 10) => crypto.randomBytes(len).toString("base64url").slice(0, len);
+
+/* ---------- opaque bearer tokens (ASP access grants) — store only the hash ---------- */
+export const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");

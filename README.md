@@ -81,6 +81,18 @@ src/crypto.js    scrypt passwords, AES-GCM creds, HMAC sessions
 public/          the dashboard site
 ```
 
+## OKX.AI paid agent services (optional)
+
+XMAIL can expose `/asp/triage`, `/asp/draft_reply`, and `/asp/fill_template` as
+paid services other agents call on the OKX.AI marketplace, using OKX's
+official x402 SDK (`@okxweb3/x402-express`) to verify and settle payments —
+see `OKX.md` for the full setup. By default `OKX_NETWORK_ID=eip155:1952`,
+X Layer **testnet** — safe to leave running and test against with free
+testnet funds from the
+[X Layer faucet](https://www.okx.com/xlayer/faucet/xlayerfaucet). Only set
+`OKX_NETWORK_ID=eip155:196` (X Layer **mainnet**) after you've confirmed the
+full pay → verify → deliver flow works on testnet — mainnet moves real USDT.
+
 ## Security notes
 - User inbox passwords are AES-256-GCM encrypted with `SERVER_SECRET`; user account passwords are scrypt-hashed
 - Sessions are HMAC-signed httpOnly cookies (30 days)

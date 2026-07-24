@@ -33,6 +33,15 @@ export const config = {
   // optional: voice-note transcription (OpenAI Whisper). Leave blank to disable.
   openaiKey: process.env.OPENAI_API_KEY || "",
 
+  // outbound send via Resend's HTTPS API (works on hosts like Render that block
+  // outbound SMTP ports). Leave RESEND_API_KEY blank to send via direct SMTP instead.
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || "",
+    fromEmail: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+    fromName: process.env.RESEND_FROM_NAME || "XMAIL",
+    enabled: !!process.env.RESEND_API_KEY,
+  },
+
   // optional: the shared "forward anything to XMAIL" inbox. Leave blank to disable.
   forward: {
     user: process.env.FORWARD_MAIL_USER || "",

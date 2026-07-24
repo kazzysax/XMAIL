@@ -12,7 +12,7 @@ carry real settlement.
 services other agents call:
 | Service | Endpoint | Price (USDT) | Returns |
 |---|---|---|---|
-| xmail.triage | POST /asp/triage | 0.005 | priority, summary, action |
+| xmail.triage | POST /asp/triage | 0.005 | summary, action, highlights, category (caller-defined), priority, spam signals |
 | xmail.draft_reply | POST /asp/draft_reply | 0.02 | drafted reply |
 | xmail.fill_template | POST /asp/fill_template | 0.02 | filled template |
 
