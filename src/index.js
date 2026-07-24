@@ -16,6 +16,17 @@ import { spentToday } from "./okx/ledger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// @okxweb3/x402-core's paymentMiddleware() kicks off resourceServer.initialize()
+// against the OKX Facilitator eagerly at mount time, without anyone awaiting
+// that promise until the first matching request arrives. If OKX_API_KEY/
+// OKX_SECRET_KEY/OKX_PASSPHRASE are missing or wrong, that promise rejects on
+// its own and Node treats it as an unhandled rejection — crashing this entire
+// multi-tenant mail platform over a Tier-1 ASP payment credential, not just
+// failing the ASP endpoints. Never let that take down mail/Telegram/WhatsApp.
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection (ignored, process kept alive):", err);
+});
+
 /* ---------- web server ---------- */
 const app = express();
 app.use(cookieParser());
